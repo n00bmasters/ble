@@ -13,6 +13,7 @@ class Kalman:
         kf.P *= 1000.0  # covariance matrix
         kf.R = UNCERTAINTY  # state uncertainty
         self.kf = kf
+        self.pushed = 0
         return
 
     def apply_kalman_filter(self,new_value):
@@ -41,7 +42,7 @@ class DistanceCalc:
             system = []
             for i in range(len(self.trans)):
                 system.append((x - self.trans[i][0]) ** 2 + (y - self.trans[i][1]) ** 2 - (d[i] - r) ** 2)
-            return system
+            return tuple(system)
     
         init = (0,0,0)
         res = scipy.optimize.least_squares(equations, init)
