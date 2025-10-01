@@ -4,19 +4,21 @@ from filterpy.kalman import KalmanFilter
 
 UNCERTAINTY = 17
 
-def initialize_kalman_filter():
-    kf = KalmanFilter(dim_x=1, dim_z=1)
-    kf.x = np.array([0.0])  # initial state
-    kf.F = np.array([[1.0]])  # state transition matrix
-    kf.H = np.array([[1.0]])  # Measurement function
-    kf.P *= 1000.0  # covariance matrix
-    kf.R = UNCERTAINTY  # state uncertainty
-    return kf
+class Kalman:
+    def __init__(self):
+        kf = KalmanFilter(dim_x=1, dim_z=1)
+        kf.x = np.array([0.0])  # initial state
+        kf.F = np.array([[1.0]])  # state transition matrix
+        kf.H = np.array([[1.0]])  # Measurement function
+        kf.P *= 1000.0  # covariance matrix
+        kf.R = UNCERTAINTY  # state uncertainty
+        self.kf = kf
+        return
 
-def apply_kalman_filter(kf, new_value):
-    kf.predict()
-    kf.update(np.array([new_value]))
-    return kf.x  # This is the filtered value
+    def apply_kalman_filter(self,new_value):
+        self.kf.predict()
+        self.kf.update(np.array([new_value]))
+        return self.kf.x  # This is the filtered value
 
 class DistanceCalc:
     def __init__(self, trans: list[tuple], def_power: list[int]):
@@ -24,12 +26,15 @@ class DistanceCalc:
         self.def_power = def_power
         self.scale = 32 
         self.ple = 1.8
-    def get_pos(self, rssi: list[int]):
+
+    def get_pos(self, rssi: list[int], n=8):
         d = []
+        kalmanArr = [Kalman() for _ in range(n)]
         for i in range(len(rssi)):
             d.append(self.get_dist(rssi[i], i)) 
         est_x, est_y = self.trilaterate(d)
         return est_x, est_y
+    
     def trilaterate(self, d):
         def equations(guess):
             x, y, r = guess
