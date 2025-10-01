@@ -1,5 +1,5 @@
 import scipy
-import numpy
+import numpy as np
 from filterpy.kalman import KalmanFilter
 
 UNCERTAINTY = 17
@@ -29,7 +29,6 @@ class DistanceCalc:
 
     def get_pos(self, rssi: list[int], n=8):
         d = []
-        kalmanArr = [Kalman() for _ in range(n)]
         for i in range(len(rssi)):
             d.append(self.get_dist(rssi[i], i)) 
         est_x, est_y = self.trilaterate(d)
