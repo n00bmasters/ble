@@ -111,7 +111,6 @@ class BLEScanner:
                 if not wifi_ok or not mqtt_ok:
                     print("Network issue detected. Pausing scanner for maintenance...")
                     self.ble.gap_scan(None) 
-                    self.led.off()
                     time.sleep_ms(200)
 
                     if not wifi_ok:
