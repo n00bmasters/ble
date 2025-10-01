@@ -27,15 +27,32 @@ def on_connect(client, userdata, flags, reason_code, properties):
 def on_message(client, userdata, msg):
     global rssi
     global f_rssi
-    js = json.loads(msg.payload)
-    prn
-    if not all(f_rssi):
-        f_rssi[int(js["name"][-1])-1] = float(rssi[int(js["name"][-1])-1].apply_kalman_filter(int(js["rssi"])))
-        print(msg.payload)
+    nodes_available = []
+    rssis = []
+    old = 0 
+    for i in range(len(msg.payload)):
+        if msg.payload[i] == '}':
+            js = json.loads(msg.payload[old:i + 1])
+            old = i + 1
+            name = js['name']
+            nodes_available.append(int(name[name.find('_'):]))
+            rssis.append(int(js['rssi']))
+
+    if len(nodes_available) < 3:
+        print('less than 3 available nodes, fix is not obtained')
     else:
-        f_rssi[int(js["name"][-1])-1] = float(rssi[int(js["name"][-1])-1].apply_kalman_filter(int(js["rssi"])))
-        print(calc.get_pos(f_rssi))
-        print(msg.payload)
+        
+
+
+    
+    # prn
+    # if not all(f_rssi):
+    #     f_rssi[int(js["name"][-1])-1] = float(rssi[int(js["name"][-1])-1].apply_kalman_filter(int(js["rssi"])))
+    #     print(msg.payload)
+    # else:
+    #     f_rssi[int(js["name"][-1])-1] = float(rssi[int(js["name"][-1])-1].apply_kalman_filter(int(js["rssi"])))
+    #     print(calc.get_pos(f_rssi))
+    #     print(msg.payload)
 
 
 

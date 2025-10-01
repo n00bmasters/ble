@@ -16,7 +16,7 @@ class Kalman:
         self.pushed = 0
         return
 
-    def apply_kalman_filter(self,new_value):
+    def apply_kalman_filter(self, new_value):
         self.kf.predict()
         self.kf.update(np.array([new_value]))
         return self.kf.x  # This is the filtered value
@@ -24,14 +24,14 @@ class Kalman:
 class DistanceCalc:
     def __init__(self, trans: list[tuple], def_power: list[int]):
         self.trans = trans
-        self.def_power = def_power
+        self.def_power = def_power #СУКИ КАЛИБРУЙТЕ ОТ ОДНОЙ НОДЫ, А НЕ ОТ ВСЕХ
         self.scale = 32 
         self.ple = 1.8
 
-    def get_pos(self, rssi: list[int], n=8):
+    def get_pos(self, available_nodes: list[int], rssi: list[int]):
         d = []
         for i in range(len(rssi)):
-            d.append(self.get_dist(rssi[i], i)) 
+            d.append(self.get_dist(rssi[i], available_nodes[i])) 
         est_x, est_y = self.trilaterate(d)
         return est_x, est_y
     
