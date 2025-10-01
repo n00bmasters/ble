@@ -29,14 +29,14 @@ def on_message(client, userdata, msg):
     global f_rssi
     nodes_available = []
     rssis = []
-    old = 0 
-    for i in range(len(msg.payload)):
-        if msg.payload[i] == '}':
-            js = json.loads(msg.payload[old:i + 1])
-            old = i + 1
-            name = js['name']
-            nodes_available.append(int(name[name.find('_'):]))
-            rssis.append(int(js['rssi']))
+    old = 0
+    meow = msg.payload.decode("utf-8")[1:-1].split('}, ')
+    for i in meow:
+        i = i + '}' if '}' != i[-1] else i
+        js = json.loads(i)
+        name = js['name']
+        nodes_available.append(int(name[name.find('_')+1:]) - 1)
+        rssis.append(int(js['rssi']))
 
     if len(nodes_available) < 3:
         print('less than 3 available nodes, fix is not obtained')

@@ -39,8 +39,10 @@ class DistanceCalc:
         def equations(guess):
             x, y, r = guess
             nonlocal d
+            print(d)
             system = []
             for i in range(len(self.trans)):
+                print(i)
                 system.append((x - self.trans[i][0]) ** 2 + (y - self.trans[i][1]) ** 2 - (d[i] - r) ** 2)
             return tuple(system)
     
@@ -52,5 +54,5 @@ class DistanceCalc:
     def get_dist(self, rssi, i):
         return 10 ** ((self.def_power[i] - rssi) / (10 * self.ple))
 
-di = DistanceCalc([(0,1), (1,0), (-1, 0)], [-50, -50, -50])
-print(di.get_pos([-50, -49, -46]))
+#di = DistanceCalc([(0,1), (1,0), (-1, 0)], [-50, -50, -50])
+#print(di.get_pos([-50, -49, -46]))
