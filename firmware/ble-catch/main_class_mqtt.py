@@ -24,7 +24,7 @@ TARGET_NAMES = [
     "beacon_8"
 ]
 
-MIN_RSSI = -80
+MIN_RSSI = -110
 
 class BLEScanner:
     def __init__(self, target_names, min_rssi):
@@ -32,21 +32,21 @@ class BLEScanner:
         self.min_rssi = min_rssi
         self.ble = bluetooth.BLE()
         self.mqtt_client = None
+
+        self.sta_if = network.WLAN(network.STA_IF)
         
     def _connect_wifi(self):
-        sta_if = network.WLAN(network.STA_IF)
-        if not sta_if.isconnected():
+        if not self.sta_if.isconnected():
             print('Connecting to network...')
-            sta_if.active(True)
-            sta_if.connect(WIFI_SSID, WIFI_PASS)
-            while not sta_if.isconnected():
+            self.sta_if.active(True)
+            self.sta_if.connect(WIFI_SSID, WIFI_PASS)
+            while not self.sta_if.isconnected():
                 time.sleep(1)
-        print('Network config:', sta_if.ifconfig())
+        print('Network config:', self.sta_if.ifconfig())
 
     def _check_wifi(self):
-        sta_if = network.WLAN(network.STA_IF)
-        return sta_if.isconnected()
-        
+        return self.sta_if.isconnected()
+
     def _connect_mqtt(self):
         self.mqtt_client = MQTTClient(client_id="", server=MQTT_BROKER)
         print("Connecting to MQTT broker...")
@@ -97,16 +97,33 @@ class BLEScanner:
         self.ble.active(True)
         self.ble.irq(self._scan_callback)
         
-        print(f"Starting scanner...")
+        print(f"Starting initial scanner...")
         self.ble.gap_scan(0, 150000, 130000, True)
         
+        last_check = time.ticks_ms()
+        
         while True:
-            if not self._check_wifi():
-                print("WiFi disconnected. Reconnecting...")
-                self._connect_wifi()
-            if not self._check_mqtt():
-                print("MQTT disconnected. Reconnecting...")
-                self._connect_mqtt()
+            # Проверяем соединения раз в 15 секунд
+            if time.ticks_diff(time.ticks_ms(), last_check) > 15000:
+                wifi_ok = self.sta_if.isconnected()
+                mqtt_ok = self._check_mqtt()
+
+                if not wifi_ok or not mqtt_ok:
+                    print("Network issue detected. Pausing scanner for maintenance...")
+                    self.ble.gap_scan(None) 
+                    self.led.off()
+                    time.sleep_ms(200)
+
+                    if not wifi_ok:
+                        self._connect_wifi()
+                    
+                    if self.sta_if.isconnected() and not mqtt_ok:
+                        self._connect_mqtt()
+
+                    print("Resuming scanner...")
+                    self.ble.gap_scan(0, 150000, 130000, True)
+                
+                last_check = time.ticks_ms()
             
             time.sleep(1)
 
