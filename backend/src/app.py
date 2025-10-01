@@ -13,12 +13,12 @@ def on_connect(client, userdata, flags, reason_code, properties):
     global calc
     global f_rssi
 
-    points = []
+    points = dict()
     client.subscribe("ble_rssi/rssi")
     with open('../config/standart.beacons', 'r') as fp:
         next(fp)
         for i in fp:
-            points.append(tuple(map(float, i[:-1].split(';')[1:])))
+            points[i] = tuple(map(float, i[:-1].split(';')[1:]))
         calc = DistanceCalc(points, [-50 for i in range(len(points))])
         rssi = [Kalman() for i in range(len(points))]
         f_rssi = [0 for i in range(len(points))]

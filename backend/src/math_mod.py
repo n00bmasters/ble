@@ -22,7 +22,7 @@ class Kalman:
         return self.kf.x  # This is the filtered value
 
 class DistanceCalc:
-    def __init__(self, trans: list[tuple], def_power: list[int]):
+    def __init__(self, trans: dict, def_power: list[int]):
         self.trans = trans
         self.def_power = def_power #СУКИ КАЛИБРУЙТЕ ОТ ОДНОЙ НОДЫ, А НЕ ОТ ВСЕХ
         self.scale = 32 
@@ -32,16 +32,16 @@ class DistanceCalc:
         d = []
         for i in range(len(rssi)):
             d.append(self.get_dist(rssi[i], available_nodes[i])) 
-        est_x, est_y = self.trilaterate(d)
+        est_x, est_y = self.trilaterate(d, available_nodes)
         return est_x, est_y
     
-    def trilaterate(self, d):
+    def trilaterate(self, d, available_nodes):
         def equations(guess):
             x, y, r = guess
             nonlocal d
             print(d)
             system = []
-            for i in range(len(self.trans)):
+            for i in range(len(available_nodes)):
                 print(i)
                 system.append((x - self.trans[i][0]) ** 2 + (y - self.trans[i][1]) ** 2 - (d[i] - r) ** 2)
             return tuple(system)
