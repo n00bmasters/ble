@@ -41,7 +41,7 @@ def on_message(client, userdata, msg):
     if len(nodes_available) < 3:
         print('less than 3 available nodes, fix is not obtained')
     else:
-        
+        print(calc.get_pos(nodes_available, rssis))
 
 
     
