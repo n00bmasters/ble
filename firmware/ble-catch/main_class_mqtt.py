@@ -32,6 +32,7 @@ class BLEScanner:
         self.min_rssi = min_rssi
         self.ble = bluetooth.BLE()
         self.mqtt_client = None
+        self.beacons_buffer = {}
 
         self.sta_if = network.WLAN(network.STA_IF)
         
@@ -81,15 +82,18 @@ class BLEScanner:
             adv_info = self._decode_adv_payload(adv_data_bytes)
             if 'name' not in adv_info or adv_info['name'] not in self.target_names: return
 
-            device_info = {
-                "name": adv_info['name'],
-                "mac": ubinascii.hexlify(addr_bytes, ':').decode().upper(),
-                "rssi": rssi
-            }
+            device_name = adv_info['name']
+            if device_name not in self.beacons_buffer or rssi > self.beacons_buffer[device_name]['rssi']:
+                self.beacons_buffer[device_name] = {
+                    # "mac": ubinascii.hexlify(addr_bytes, ':').decode().upper(),
+                    "rssi": rssi,
+                    # "last_seen": time.time()
+                }
+
             
-            payload = json.dumps(device_info)
-            print(f"Publishing: {payload}")
-            self.mqtt_client.publish(MQTT_TOPIC, payload)
+            # payload = json.dumps(device_info)
+            # print(f"Publishing: {payload}")
+            # self.mqtt_client.publish(MQTT_TOPIC, payload)
     
     def run(self):
         self._connect_wifi()
@@ -103,28 +107,43 @@ class BLEScanner:
         last_check = time.ticks_ms()
         
         while True:
-            # Проверяем соединения раз в 15 секунд
-            if time.ticks_diff(time.ticks_ms(), last_check) > 15000:
-                wifi_ok = self.sta_if.isconnected()
-                mqtt_ok = self._check_mqtt()
+            time.sleep(0.1)
+            wifi_ok = self.sta_if.isconnected()
+            mqtt_ok = self._check_mqtt()
 
-                if not wifi_ok or not mqtt_ok:
-                    print("Network issue detected. Pausing scanner for maintenance...")
-                    self.ble.gap_scan(None) 
-                    time.sleep_ms(200)
+            if not wifi_ok or not mqtt_ok:
+                print("Network issue detected. Pausing scanner for maintenance...")
+                self.ble.gap_scan(None) 
+                time.sleep_ms(200)
 
-                    if not wifi_ok:
-                        self._connect_wifi()
-                    
-                    if self.sta_if.isconnected() and not mqtt_ok:
-                        self._connect_mqtt()
-
-                    print("Resuming scanner...")
-                    self.ble.gap_scan(0, 150000, 130000, True)
+                if not wifi_ok:
+                    self._connect_wifi()
                 
-                last_check = time.ticks_ms()
-            
-            time.sleep(1)
+                if self.sta_if.isconnected() and not mqtt_ok:
+                    self._connect_mqtt()
+
+                print("Resuming scanner...")
+                self.ble.gap_scan(0, 150000, 130000, True)
+            if self.beacons_buffer:
+                batch_payload = []
+                for name, data in self.beacons_buffer.items():
+                    item = {"name": name, "rssi": data["rssi"]}
+                    batch_payload.append(item)
+                
+                try:
+                    payload_str = json.dumps(batch_payload)
+                    self.mqtt_client.publish(MQTT_TOPIC, payload_str)
+                    print(f"Published batch: {payload_str}")
+                except Exception as e:
+                    print(f"Failed to publish batch: {e}")
+                    self.mqtt_client = None # Сбрасываем клиент при ошибке
+                
+                # Очищаем "корзину" для следующего 5-секундного сбора
+                self.beacons_buffer.clear()
+            else:
+                print("No beacons detected in this interval.")
+                
+
 
 # --- Main ---
 if __name__ == "__main__":
