@@ -1,6 +1,6 @@
 import paho.mqtt.client as mqtt
 import numpy as np
-from math_mod import DistanceCalc, Kalman
+from backend.src.math_mod_2 import DistanceCalc, Kalman
 import json
 import matplotlib.pyplot as plt
 import time 
@@ -62,7 +62,7 @@ def calibrate():
             print(collector)            
             if beacon_name_to_calibrate in collector:
                 rssi_list = collector[beacon_name_to_calibrate]
-                tx_power = np.mean(rssi_list)
+                tx_power = np.median(rssi_list)
                 tx_power_results[beacon_name_to_calibrate] = tx_power
                 print(f"SUCCESS: Calibrated TxPower for {beacon_name_to_calibrate} is {tx_power_results[beacon_name_to_calibrate]}")
             else:

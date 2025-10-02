@@ -66,7 +66,7 @@ def on_connect(client, userdata, flags, reason_code, properties):
 
 
 def on_message(client, userdata, msg):
-    global cur_pos, kalman_filter, position_plot, fig, calc, tmp_pos
+    global cur_pos, kalman_filter, position_plot, fig, calc
     data_js = json.loads(msg.payload.decode("utf-8"))['pack'] # data from mqtt
     # print(data_js)
 
