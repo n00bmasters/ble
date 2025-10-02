@@ -32,9 +32,23 @@ def on_connect(client, userdata, flags, reason_code, properties):
             points[int(st[-1])] = tuple(map(float, (x, y)))
         print(points)
 
-    calc = DistanceCalc(points, list(json.loads(open('../config/calibrate.beacons').read()).values()))
-    print(list(json.loads(open('../config/calibrate.beacons').read()).items()))
-    #print(rssi)
+
+    with open('tx_power_config.json', 'r') as f:
+        tx_power_data = json.load(f)
+
+    tx_powers = []
+    for i in range(1, BEACON_COUNT + 1):
+        beacon_name = f'beacon_{i}'
+        if beacon_name in tx_power_data:
+            tx_powers.append(tx_power_data[beacon_name])
+        else:
+            print(f"WARNING: No calibration data found for {beacon_name}. Using default -60.")
+            tx_powers.append(-60.0)
+
+    calc = DistanceCalc(points, tx_powers)
+    print(f"Using Tx Powers: {tx_powers}")
+
+    # -- Tuning Kalman filter parameters --
     dt=2.5 # дата тайм между измерениями в секундах
     std_acc=0.3 # Mean noise БУДЕМ КАЛИБРОВАТЬ
 
@@ -86,27 +100,22 @@ def on_message(client, userdata, msg):
     if len(beacon_measurements) < 3:
         print('less than 3 available nodes, fix is not obtained')
     else:
+        # ЭТО СУКА СВЕЖИЙ КОД ЕСЛИ ЕГО У ТЕБЯ ЕГО НЕТ ТО ПОШЕЛ НАХУЙ
         raw_pos = calc.get_pos(beacon_measurements)
-        print(f"RAW POS:{raw_pos}")
-
+        
         kalman_filter.predict()
-
+        
 
         kalman_filter.update(np.array([[raw_pos[0]], [raw_pos[1]]]))
-
-
+        
         filtered_state = kalman_filter.kf.x
-        r_state = raw_pos
-        if (dist(raw_pos, cur_pos) < 7):
-            cur_pos = [r_state[0], r_state[1]]
+        cur_pos = [filtered_state[0], filtered_state[1]] 
+        
+        print(f"RAW: ({raw_pos[0]:.2f}, {raw_pos[1]:.2f})  |  FILTERED: ({cur_pos[0]:.2f}, {cur_pos[1]:.2f})")
 
-
-        print(f"Kalman filtered position: {cur_pos}")
-
-
-        position_plot.set_data([cur_pos[0]], [cur_pos[1]])
-        r_plot.set_data([raw_pos[0]], [raw_pos[1]])
-        f_plot.set_data([filtered_state[0]], [filtered_state[1]])
+        position_plot.set_data([cur_pos[0]], [cur_pos[1]]) 
+        r_plot.set_data([raw_pos[0]], [raw_pos[1]]) 
+        f_plot.set_data([filtered_state[0]], [filtered_state[1]]) 
         
         # Refresh the plot
         plt.savefig('static/plot.png')
