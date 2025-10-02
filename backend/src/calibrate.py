@@ -44,7 +44,7 @@ def calibrate():
     client.on_connect = on_connect
     client.on_message = on_message
     
-    client.connect("127.0.0.1", 1883, 60)
+    client.connect("10.9.34.158", 1883, 60)
     client.loop_start()
 
     try:
