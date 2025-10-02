@@ -1,0 +1,90 @@
+import paho.mqtt.client as mqtt
+import numpy as np
+from math_mod import DistanceCalc, Kalman
+import json
+import matplotlib.pyplot as plt
+
+rssi = []
+f_rssi = []
+calc = None
+cur_pos = [0,0]
+
+BEACON_COUNT = 8
+CALIBRATION_TIME_S = 30
+DISTANCE_METERS = 1.0
+MQTT_TOPIC = "ble_rssi/rssi"
+
+collector = {}
+
+def on_connect(client, userdata, flags, reason_code, properties):
+    client.subscribe("ble_rssi/rssi")
+    
+def on_message(client, userdata, msg):
+    global collector
+    rssis = []
+    old = 0
+    meow = msg.payload.decode("utf-8")
+    js = json.loads(meow)["pack"]
+    for beacon in js:
+        name = beacon['name']
+        rssi_avg = beacon['rssi_avg']
+        collector.setdefault(name, []).append(rssi_avg)
+        print(f"{name}: {rssi_avg}")
+
+    #print(js)
+    #print(meow)
+
+
+def calibrate():
+    global collector
+    tx_power_results = {}
+    
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+    client.on_connect = on_connect
+    client.on_message = on_message
+    
+    client.connect("127.0.0.1", 1883, 60)
+    client.loop_start()
+
+    try:
+        for i in range(1, BEACON_COUNT + 1):
+            beacon_name_to_calibrate = f"beacon_{i}"
+            collector = {} # Очищаем сборщик для нового маяка
+            
+            input(f"\n[ACTION] Please stand at {DISTANCE_METERS}m from BEACON {i} and press Enter...")
+            
+            print(f"Collecting data for {CALIBRATION_TIME_S} seconds for {beacon_name_to_calibrate}...")
+            time.sleep(CALIBRATION_TIME_S)
+            
+            # Останавливаем сбор (просто перестаем слушать на время обработки)
+            client.unsubscribe(MQTT_TOPIC)
+            
+            print("Processing data...")
+            
+            if beacon_name_to_calibrate in collector:
+                rssi_list = collector[beacon_name_to_calibrate]
+                tx_power = np.mean(rssi_list)
+                tx_power_results[beacon_name_to_calibrate] = round(tx_power, 2)
+                print(f"SUCCESS: Calibrated TxPower for {beacon_name_to_calibrate} is {tx_power_results[beacon_name_to_calibrate]}")
+            else:
+                print(f"ERROR: No data received from {beacon_name_to_calibrate}. Skipping.")
+
+            client.subscribe(MQTT_TOPIC)
+
+    except KeyboardInterrupt:
+        print("Calibration interrupted.")
+    finally:
+        client.loop_stop()
+
+    # Сохраняем результаты
+    output_file = "tx_power_config.json"
+    with open(output_file, 'w') as f:
+        json.dump(tx_power_results, f, indent=4)
+    print(f"\nCalibration complete! Results saved to {output_file}")
+
+
+
+
+if __name__ == "__main__":
+    calibrate()
+    
