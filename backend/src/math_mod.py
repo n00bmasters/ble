@@ -2,7 +2,7 @@ import scipy
 import numpy as np
 from filterpy.kalman import KalmanFilter
 
-UNCERTAINTY = 17
+UNCERTAINTY = 25
 
 class Kalman:
     def __init__(self):
@@ -26,7 +26,7 @@ class DistanceCalc:
         self.trans = trans
         self.def_power = def_power #СУКИ КАЛИБРУЙТЕ ОТ ОДНОЙ НОДЫ, А НЕ ОТ ВСЕХ
         self.scale = 32 
-        self.ple = 1.8
+        self.ple = 3
 
     def get_pos(self, available_nodes: list[int], rssi: list[float]):
         d = dict()

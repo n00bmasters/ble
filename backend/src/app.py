@@ -20,7 +20,7 @@ def on_connect(client, userdata, flags, reason_code, properties):
         for i in fp:
             st, x, y = i.split(';')
             points[int(st[-1])] = tuple(map(float, (x, y)))
-        #print(points)
+        print(points)
         calc = DistanceCalc(points, [-50 for i in range(len(points))])
         rssi = [Kalman() for i in range(len(points))]
         f_rssi = [0 for i in range(len(points))]
@@ -32,14 +32,16 @@ def on_message(client, userdata, msg):
     nodes_available = []
     rssis = []
     old = 0
-    meow = msg.payload.decode("utf-8")[1:-1].split('}, ')
-    for i in meow:
-        i = i + '}' if '}' != i[-1] else i
-        js = json.loads(i)
-        name = js['name']
+    meow = msg.payload.decode("utf-8")
+    js = json.loads(meow)["pack"]
+    print(js)
+    print(meow)
+    for i in js:
+        print(i)
+        name = i['name']
         nodes_available.append(int(name[name.find('_')+1:]))
         #print(int(name[name.find('_')+1:]))
-        rssis.append(rssi[int(name[name.find('_')+1:]) - 1].apply_kalman_filter(js['rssi']))
+        rssis.append(rssi[int(name[name.find('_')+1:]) - 1].apply_kalman_filter(i['rssi']))
 
     if len(nodes_available) < 3:
         print('less than 3 available nodes, fix is not obtained')
