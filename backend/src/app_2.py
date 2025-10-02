@@ -118,15 +118,10 @@ def on_message(client, userdata, msg):
         if np.isnan(raw_pos[0]):
             print("Could not determine a position from fingerprinting.")
             return 
-        
         kalman_filter.predict()
-        
-
         kalman_filter.update(np.array([[raw_pos[0]], [raw_pos[1]]]))
-        
         filtered_state = kalman_filter.kf.x
         cur_pos = [filtered_state[0], filtered_state[1]] 
-        
         print(f"RAW: ({raw_pos[0]:.2f}, {raw_pos[1]:.2f})  |  FILTERED: ({cur_pos[0]:.2f}, {cur_pos[1]:.2f})")
 
         position_plot.set_data([cur_pos[0]], [cur_pos[1]]) 
