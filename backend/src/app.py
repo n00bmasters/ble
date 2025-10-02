@@ -18,11 +18,13 @@ def on_connect(client, userdata, flags, reason_code, properties):
     with open('../config/standart.beacons', 'r') as fp:
         next(fp)
         for i in fp:
-            points[i] = tuple(map(float, i[:-1].split(';')[1:]))
+            st, x, y = i.split(';')
+            points[int(st[-1])] = tuple(map(float, (x, y)))
+        #print(points)
         calc = DistanceCalc(points, [-50 for i in range(len(points))])
         rssi = [Kalman() for i in range(len(points))]
         f_rssi = [0 for i in range(len(points))]
-        print(rssi)
+        #print(rssi)
 
 def on_message(client, userdata, msg):
     global rssi
@@ -35,8 +37,9 @@ def on_message(client, userdata, msg):
         i = i + '}' if '}' != i[-1] else i
         js = json.loads(i)
         name = js['name']
-        nodes_available.append(int(name[name.find('_')+1:]) - 1)
-        rssis.append(float(js['rssi']))
+        nodes_available.append(int(name[name.find('_')+1:]))
+        #print(int(name[name.find('_')+1:]))
+        rssis.append(rssi[int(name[name.find('_')+1:]) - 1].apply_kalman_filter(js['rssi']))
 
     if len(nodes_available) < 3:
         print('less than 3 available nodes, fix is not obtained')

@@ -19,7 +19,7 @@ class Kalman:
     def apply_kalman_filter(self, new_value):
         self.kf.predict()
         self.kf.update(np.array([new_value]))
-        return self.kf.x  # This is the filtered value
+        return self.kf.x[0]  # This is the filtered value
 
 class DistanceCalc:
     def __init__(self, trans: dict, def_power: list[int]):
@@ -30,8 +30,9 @@ class DistanceCalc:
 
     def get_pos(self, available_nodes: list[int], rssi: list[float]):
         d = dict()
-        for i in available_nodes:
-            d[i] = self.get_dist(rssi[i], i)
+        #print(available_nodes, rssi)
+        for i in range(len(available_nodes)):
+            d[available_nodes[i]] = self.get_dist(rssi[i], available_nodes[i])
         est_x, est_y = self.trilaterate(d, available_nodes)
         return est_x, est_y
     
@@ -41,7 +42,6 @@ class DistanceCalc:
             nonlocal d
             system = []
             for i in available_nodes:
-                print(i)
                 system.append((x - self.trans[i][0]) ** 2 + (y - self.trans[i][1]) ** 2 - (d[i] - r) ** 2)
             return tuple(system)
     
@@ -51,7 +51,7 @@ class DistanceCalc:
         return res[0], res[1]
 
     def get_dist(self, rssi, i):
-        return 10 ** ((self.def_power[i] - rssi) / (10 * self.ple))
+        return 10 ** ((self.def_power[i - 1] - rssi) / (10 * self.ple))
 
 #di = DistanceCalc([(0,1), (1,0), (-1, 0)], [-50, -50, -50])
 #print(di.get_pos([-50, -49, -46]))
