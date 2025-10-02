@@ -21,7 +21,7 @@ PLOT_PATH = IMAGES_DIR / "plot.png"
 METADATA_FILE = Path("metadata.json")
 JOB_ID = "image_job"
 
-subprocess.run(['python', 'app_2.py'])
+subprocess.run(['python3.12', 'app_2.py'])
 
 app = FastAPI()
 

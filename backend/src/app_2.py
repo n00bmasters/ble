@@ -36,27 +36,16 @@ def on_connect(client, userdata, flags, reason_code, properties):
 
 
     with open('tx_power_config.json', 'r') as f:
-        tx_powers = json.load(f)
+        tx_power_data = json.load(f)
 
-<<<<<<< HEAD
     tx_powers = []
-    for i in range(1, 8 + 1):
+    for i in range(1, BEACON_COUNT + 1):
         beacon_name = f'beacon_{i}'
         if beacon_name in tx_power_data:
             tx_powers.append(tx_power_data[beacon_name])
         else:
             print(f"WARNING: No calibration data found for {beacon_name}. Using default -60.")
             tx_powers.append(-60.0)
-=======
-    # tx_powers = []
-    # for i in range(1, BEACON_COUNT + 1):
-    #     beacon_name = f'beacon_{i}'
-    #     if beacon_name in tx_power_data:
-    #         tx_powers.append(tx_power_data[beacon_name])
-    #     else:
-    #         print(f"WARNING: No calibration data found for {beacon_name}. Using default -60.")
-    #         tx_powers.append(-60.0)
->>>>>>> refs/remotes/origin/backend
 
     calc = DistanceCalc(points, tx_powers)
     print(f"Using Tx Powers: {tx_powers}")
