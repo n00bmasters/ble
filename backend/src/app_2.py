@@ -3,7 +3,7 @@ import numpy as np
 from math_mod_2 import DistanceCalc, Kalman2D
 import json
 import matplotlib.pyplot as plt
-
+from math import dist
 
 calc = None
 cur_pos = [0,0]
@@ -49,9 +49,11 @@ def on_connect(client, userdata, flags, reason_code, properties):
     beacon_plot = ax.plot(beacon_x, beacon_y, 'b^', markersize=10, label='Beacons')[0]
     
     # Initialize current position plot
-    global position_plot
-    position_plot = ax.plot([cur_pos[0]], [cur_pos[1]], 'ro', markersize=8, label='Current Position')[0]
+    global position_plot, f_plot, r_plot
     
+    position_plot = ax.plot([cur_pos[0]], [cur_pos[1]], 'ro', markersize=8, label='Current Position')[0]
+    f_plot = ax.plot([cur_pos[0]], [cur_pos[1]], 'ko', markersize=8, label='Filt Position')[0]
+    r_plot = ax.plot([cur_pos[0]], [cur_pos[1]], 'go', markersize=8, label='Raw Position')[0]
     ax.set_xlabel('X Position')
     ax.set_ylabel('Y Position')
     ax.set_title('Real-time Position Tracking')
@@ -66,7 +68,7 @@ def on_connect(client, userdata, flags, reason_code, properties):
 
 
 def on_message(client, userdata, msg):
-    global cur_pos, kalman_filter, position_plot, fig, calc
+    global cur_pos, kalman_filter, position_plot, fig, calc, f_plot, r_plot
     data_js = json.loads(msg.payload.decode("utf-8"))['pack'] # data from mqtt
     # print(data_js)
 
@@ -94,15 +96,17 @@ def on_message(client, userdata, msg):
 
 
         filtered_state = kalman_filter.kf.x
-       
-        if abs(filtered_state[0] - cur_pos[0]) < 2 and abs(filtered_state[1] - cur_pos[1]) < 4.5:
-            cur_pos = [filtered_state[0], filtered_state[1]]
+        r_state = raw_pos
+        if (dist(raw_pos, cur_pos) < 7):
+            cur_pos = [r_state[0], r_state[1]]
 
 
         print(f"Kalman filtered position: {cur_pos}")
 
-        position_plot.set_data([cur_pos[0]], [cur_pos[1]])
 
+        position_plot.set_data([cur_pos[0]], [cur_pos[1]])
+        r_plot.set_data([raw_pos[0]], [raw_pos[1]])
+        f_plot.set_data([filtered_state[0]], [filtered_state[1]])
         
         # Refresh the plot
         fig.canvas.draw()
