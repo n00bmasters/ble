@@ -109,17 +109,21 @@ def on_message(client, userdata, msg):
         f_plot.set_data([filtered_state[0]], [filtered_state[1]])
         
         # Refresh the plot
+        plt.savefig('static/plot.png')
         fig.canvas.draw()
         fig.canvas.flush_events()      
         print(cur_pos)
 
 
 
+def app_run():
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+    client.on_connect = on_connect
+    client.on_message = on_message
 
-client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-client.on_connect = on_connect
-client.on_message = on_message
+    client.connect("127.0.0.1", 1883, 60)
 
-client.connect("127.0.0.1", 1883, 60)
+    client.loop_forever()
 
-client.loop_forever()
+if __name__ == '__main__':
+    app_run()
