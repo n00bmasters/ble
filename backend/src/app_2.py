@@ -36,11 +36,11 @@ def on_connect(client, userdata, flags, reason_code, properties):
     print(list(json.loads(open('../config/calibrate.beacons').read()).items()))
     #print(rssi)
     dt=2.5 # дата тайм между измерениями в секундах
-    std_acc=2.0 # Mean noise БУДЕМ КАЛИБРОВАТЬ
+    std_acc=0.3 # Mean noise БУДЕМ КАЛИБРОВАТЬ
 
     # noise measurement in meters .БУДЕМ КАЛИБРОВАТЬ
-    x_std_meas = 1.0 
-    y_std_meas=1.0
+    x_std_meas = 3.0
+    y_std_meas = 3.0
 
     kalman_filter = Kalman2D(dt, std_acc, x_std_meas, y_std_meas)
     kalman_filter.initialize_state(0, 0)

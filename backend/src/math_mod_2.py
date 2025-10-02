@@ -1,3 +1,5 @@
+# backend/src/math_mod_2.py
+
 import scipy
 import numpy as np
 from filterpy.kalman import KalmanFilter
@@ -46,21 +48,16 @@ class Kalman2D:
         # Initialize state with position (x, y) and zero velocity
         self.kf.x = np.array([x, y, 0., 0.])
 
-    
-    def apply_kalman_filter(self, new_value):
-        self.kf.predict()
-        self.kf.update(np.array([new_value]))
-        return self.kf.x[0]  # This is the filtered value
 
 class DistanceCalc:
     def __init__(self, trans: dict, def_power: list[int]):
         self.trans = trans
         self.def_power = def_power #СУКИ КАЛИБРУЙТЕ ОТ ОДНОЙ НОДЫ, А НЕ ОТ ВСЕХ
         self.scale = 32 
-        self.ple = 5
+        self.ple = 4.5
 
     def get_pos(self, beacon_measurements):
-        beacon_measurements.sort(key=lambda x: x['std_dev'], reverse=True)
+        beacon_measurements.sort(key=lambda x: x['std_dev'])
         best_beacons = beacon_measurements[:3]
         measurements_for_trilateration = []
         for beacon in best_beacons: # Preparing data for trilateration
