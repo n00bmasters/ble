@@ -8,6 +8,7 @@ from umqtt.simple import MQTTClient
 from machine import Pin, reset
 import neopixel
 import _thread
+import math
 
 # --- Settings ---
 WIFI_SSID = "s2p12d"
@@ -20,8 +21,35 @@ MIN_RSSI = -110
 NEOPIXEL_PIN = 48
 COLOR_GREEN = (0, 15, 0); COLOR_RED = (15, 0, 0); COLOR_BLUE = (0, 0, 15); COLOR_YELLOW = (15, 15, 0); COLOR_OFF = (0, 0, 0)
 
-SEND_INTERVAL_MS = 100
+SEND_INTERVAL_MS = 2000
 HEALTH_CHECK_INTERVAL_MS = 15000
+
+
+def calculate_stats(data_list):
+    if not data_list:
+        return None
+    
+    n = len(data_list)
+    
+    mean = sum(data_list) / n
+    
+    variance = sum([(x - mean) ** 2 for x in data_list]) / n
+    
+    std_dev = math.sqrt(variance)
+    
+    data_list.sort()
+    median = data_list[n // 2]
+
+    max_rssi = max(data_list)
+    
+    return {
+        "avg": round(mean, 2),
+        "median": median,
+        "std_dev": round(std_dev, 2),
+        "samples": n,
+        "max_rssi": max_rssi
+    }
+
 
 class BLEScanner:
     def __init__(self, target_names, min_rssi):
@@ -110,13 +138,23 @@ class BLEScanner:
                     last_send_time = now
 
                     if self.beacons_buffer and self.mqtt_client:
-                        
-                        # Send averaged RSSI values
-                        batch_payload = [
-                            {"name": name, "rssi": sum(data) / len(data), "mrssi": max(data), "count": len(data)} for name, data in self.beacons_buffer.items()
-                        ]
-                        
-                        batch_payload = sorted(batch_payload, key=lambda x: x['name'])
+                        batch_payload = []
+
+                        for name, data in self.beacons_buffer.items():
+                            if not data: continue
+                            # Send averaged RSSI values
+                            stats = calculate_stats(data)
+                            if not stats: continue
+                            item = {"name": name, 
+                                #  "rssi": sum(data) / len(data), 
+                                'rssi': stats["median"],
+                                'rssi_avg' : stats["avg"],
+                                'rssi_std' : stats["std_dev"],
+                                'count': stats["samples"],
+                                'mrssi': stats["max_rssi"]
+                            }
+
+                            batch_payload.append(item)
 
                         batch_timestamp = {"pack": batch_payload, "timestamp": time.time()}
 
