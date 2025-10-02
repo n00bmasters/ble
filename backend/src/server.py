@@ -10,7 +10,6 @@ from fastapi.staticfiles import StaticFiles
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 from pathlib import Path
-import subprocess
 import traceback
 
 # if app_2 exposes a function to create plot, import it.
@@ -21,7 +20,6 @@ PLOT_PATH = IMAGES_DIR / "plot.png"
 METADATA_FILE = Path("metadata.json")
 JOB_ID = "image_job"
 
-subprocess.run(['python3.12', 'app_2.py'])
 
 app = FastAPI()
 
@@ -89,7 +87,7 @@ def job_generate():
             "path": fname,
             "timestamp": datetime.utcnow().isoformat() + "Z"
         }
-        append_metadata(record)
+        #append_metadata(record)
         print("Generated image:", record["path"])
     except Exception as e:
         print("Generation failed:", e)
