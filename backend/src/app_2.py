@@ -10,6 +10,8 @@ cur_pos = [0,0]
 kalman_filter = None
 #points = {}
 
+BEACON_COUNT = 8
+
 plt.ion()  # Turn on interactive mode
 fig, ax = plt.subplots()
 x_data = []
@@ -34,8 +36,9 @@ def on_connect(client, userdata, flags, reason_code, properties):
 
 
     with open('tx_power_config.json', 'r') as f:
-        tx_power_data = json.load(f)
+        tx_powers = json.load(f)
 
+<<<<<<< HEAD
     tx_powers = []
     for i in range(1, 8 + 1):
         beacon_name = f'beacon_{i}'
@@ -44,6 +47,16 @@ def on_connect(client, userdata, flags, reason_code, properties):
         else:
             print(f"WARNING: No calibration data found for {beacon_name}. Using default -60.")
             tx_powers.append(-60.0)
+=======
+    # tx_powers = []
+    # for i in range(1, BEACON_COUNT + 1):
+    #     beacon_name = f'beacon_{i}'
+    #     if beacon_name in tx_power_data:
+    #         tx_powers.append(tx_power_data[beacon_name])
+    #     else:
+    #         print(f"WARNING: No calibration data found for {beacon_name}. Using default -60.")
+    #         tx_powers.append(-60.0)
+>>>>>>> refs/remotes/origin/backend
 
     calc = DistanceCalc(points, tx_powers)
     print(f"Using Tx Powers: {tx_powers}")
@@ -100,8 +113,11 @@ def on_message(client, userdata, msg):
     if len(beacon_measurements) < 3:
         print('less than 3 available nodes, fix is not obtained')
     else:
-        # ЭТО СУКА СВЕЖИЙ КОД ЕСЛИ ЕГО У ТЕБЯ ЕГО НЕТ ТО ПОШЕЛ НАХУЙ
+        # ЭТО СУКА СВЕЖИЙ КОД ЕСЛИ ЕГО У ТЕБЯ ЕГО НЕТ ТО ПОШЕЛ НАХУЙ 2
         raw_pos = calc.get_pos(beacon_measurements)
+        if np.isnan(raw_pos[0]):
+            print("Could not determine a position from fingerprinting.")
+            return 
         
         kalman_filter.predict()
         
@@ -118,21 +134,17 @@ def on_message(client, userdata, msg):
         f_plot.set_data([filtered_state[0]], [filtered_state[1]]) 
         
         # Refresh the plot
-        plt.savefig('static/plot.png')
         fig.canvas.draw()
         fig.canvas.flush_events()      
         print(cur_pos)
 
 
 
-def app_run():
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-    client.on_connect = on_connect
-    client.on_message = on_message
 
-    client.connect("127.0.0.1", 1883, 60)
+client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+client.on_connect = on_connect
+client.on_message = on_message
 
-    client.loop_forever()
+client.connect("127.0.0.1", 1883, 60)
 
-if __name__ == '__main__':
-    app_run()
+client.loop_forever()
