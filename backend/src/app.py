@@ -33,7 +33,8 @@ def on_connect(client, userdata, flags, reason_code, properties):
             st, x, y = i.split(';')
             points[int(st[-1])] = tuple(map(float, (x, y)))
         #print(points)
-        calc = DistanceCalc(points, [-43, -42, -41, -44, -43, -40, -41, -41])
+        calc = DistanceCalc(points, list(json.loads(open('../config/calibrate.beacons').read()).values()))
+        print(list(json.loads(open('../config/calibrate.beacons').read()).items()))
         rssi = [Kalman() for i in range(len(points))]
         f_rssi = [0 for i in range(len(points))]
         #print(rssi)
@@ -76,13 +77,14 @@ def on_message(client, userdata, msg):
         rssis.append([int(name[name.find('_')+1:]), float(i["rssi"])])
         #rssis.append([int(name[name.find('_')+1:]), rssi[int(name[name.find('_')+1:]) - 1].apply_kalman_filter(i['rssi'])])
 
-    if len(rssis) < 3:
+    if len(rssis) < 4:
         print('less than 3 available nodes, fix is not obtained')
     else:
+        print(rssis)
         tmp_pos = calc.get_pos(rssis)
 
-        cur_pos[0] = cur_pos[0] if abs(cur_pos[0] - tmp_pos[0]) > 2.5 else tmp_pos[0]
-        cur_pos[1] = cur_pos[1] if abs(cur_pos[1] - tmp_pos[1]) > 5 else tmp_pos[1]
+        cur_pos[0] = cur_pos[0] if 0.1 > abs(cur_pos[0] - tmp_pos[0]) > 4 else tmp_pos[0]
+        cur_pos[1] = cur_pos[1] if 0.3 > abs(cur_pos[1] - tmp_pos[1]) > 8 else tmp_pos[1]
         position_plot.set_data([cur_pos[0]], [cur_pos[1]])
         
         # Refresh the plot

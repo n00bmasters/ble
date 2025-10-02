@@ -3,6 +3,7 @@ import numpy as np
 from math_mod import DistanceCalc, Kalman
 import json
 import matplotlib.pyplot as plt
+import time 
 
 rssi = []
 f_rssi = []
@@ -13,7 +14,6 @@ BEACON_COUNT = 8
 CALIBRATION_TIME_S = 30
 DISTANCE_METERS = 1.0
 MQTT_TOPIC = "ble_rssi/rssi"
-MQ
 
 collector = {}
 
@@ -37,6 +37,7 @@ def on_message(client, userdata, msg):
 
 
 def calibrate():
+    global collector
     tx_power_results = {}
     
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
@@ -49,7 +50,6 @@ def calibrate():
     try:
         for i in range(1, BEACON_COUNT + 1):
             beacon_name_to_calibrate = f"beacon_{i}"
-            collector = {} 
             
             input(f"\n[ACTION] Please stand at {DISTANCE_METERS}m from BEACON {i} and press Enter...")
             
@@ -59,7 +59,7 @@ def calibrate():
             client.unsubscribe(MQTT_TOPIC)
             
             print("Processing data...")
-            
+            print(collector)            
             if beacon_name_to_calibrate in collector:
                 rssi_list = collector[beacon_name_to_calibrate]
                 tx_power = np.mean(rssi_list)
@@ -67,7 +67,7 @@ def calibrate():
                 print(f"SUCCESS: Calibrated TxPower for {beacon_name_to_calibrate} is {tx_power_results[beacon_name_to_calibrate]}")
             else:
                 print(f"ERROR: No data received from {beacon_name_to_calibrate}. Skipping.")
-
+            collector = {}
             client.subscribe(MQTT_TOPIC)
 
     except KeyboardInterrupt:
