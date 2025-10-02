@@ -100,6 +100,7 @@ def on_message(client, userdata, msg):
     if len(beacon_measurements) < 3:
         print('less than 3 available nodes, fix is not obtained')
     else:
+        # ЭТО СУКА СВЕЖИЙ КОД ЕСЛИ ЕГО У ТЕБЯ ЕГО НЕТ ТО ПОШЕЛ НАХУЙ
         raw_pos = calc.get_pos(beacon_measurements)
         
         kalman_filter.predict()
