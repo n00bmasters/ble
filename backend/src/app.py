@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 rssi = []
 f_rssi = []
 calc = None
-cur_pos = (0,0)
+cur_pos = [0,0]
 #points = {}
 
 plt.ion()  # Turn on interactive mode
@@ -67,9 +67,12 @@ def on_message(client, userdata, msg):
     js = json.loads(meow)["pack"]
     #print(js)
     #print(meow)
+
+
     for i in js:
         #print(i)
         name = i['name']
+        #print(js.get("beacon_1"))
         rssis.append([int(name[name.find('_')+1:]), float(i["rssi"])])
         #rssis.append([int(name[name.find('_')+1:]), rssi[int(name[name.find('_')+1:]) - 1].apply_kalman_filter(i['rssi'])])
 
@@ -77,8 +80,9 @@ def on_message(client, userdata, msg):
         print('less than 3 available nodes, fix is not obtained')
     else:
         tmp_pos = calc.get_pos(rssis)
-        cur_pos = cur_pos if abs(cur_pos[0] - tmp_pos[0]) > 7 or abs(cur_pos[1] - tmp_pos[1]) > 7 else tmp_pos
-        # Update only the current position dot
+
+        cur_pos[0] = cur_pos[0] if abs(cur_pos[0] - tmp_pos[0]) > 2.5 else tmp_pos[0]
+        cur_pos[1] = cur_pos[1] if abs(cur_pos[1] - tmp_pos[1]) > 5 else tmp_pos[1]
         position_plot.set_data([cur_pos[0]], [cur_pos[1]])
         
         # Refresh the plot
@@ -104,10 +108,5 @@ client.on_connect = on_connect
 client.on_message = on_message
 
 client.connect("127.0.0.1", 1883, 60)
-try:
-    client.loop_forever()
-except KeyboardInterrupt:
-    print("Stopping...")
-finally:
-    plt.ioff()
-    plt.show()
+
+client.loop_forever()
