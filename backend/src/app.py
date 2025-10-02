@@ -36,7 +36,7 @@ def on_message(client, userdata, msg):
         js = json.loads(i)
         name = js['name']
         nodes_available.append(int(name[name.find('_')+1:]) - 1)
-        rssis.append(int(js['rssi']))
+        rssis.append(float(js['rssi']))
 
     if len(nodes_available) < 3:
         print('less than 3 available nodes, fix is not obtained')

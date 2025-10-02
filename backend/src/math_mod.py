@@ -28,10 +28,10 @@ class DistanceCalc:
         self.scale = 32 
         self.ple = 1.8
 
-    def get_pos(self, available_nodes: list[int], rssi: list[int]):
-        d = []
-        for i in range(len(rssi)):
-            d.append(self.get_dist(rssi[i], available_nodes[i])) 
+    def get_pos(self, available_nodes: list[int], rssi: list[float]):
+        d = dict()
+        for i in available_nodes:
+            d[i] = self.get_dist(rssi[i], i)
         est_x, est_y = self.trilaterate(d, available_nodes)
         return est_x, est_y
     
@@ -39,9 +39,8 @@ class DistanceCalc:
         def equations(guess):
             x, y, r = guess
             nonlocal d
-            print(d)
             system = []
-            for i in range(len(available_nodes)):
+            for i in available_nodes:
                 print(i)
                 system.append((x - self.trans[i][0]) ** 2 + (y - self.trans[i][1]) ** 2 - (d[i] - r) ** 2)
             return tuple(system)
