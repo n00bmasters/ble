@@ -5,26 +5,23 @@ import ubinascii
 import json
 import network
 from umqtt.simple import MQTTClient
+from machine import Pin, reset
+import neopixel
+import _thread
 
-# --- Main Settings ---
-WIFI_SSID = "B18104"
-WIFI_PASS = "123789qwas"
-
-MQTT_BROKER = "10.31.74.38" 
+# --- Settings ---
+WIFI_SSID = "s2p12d"
+WIFI_PASS = "qwertyuiop"
+MQTT_BROKER = "172.20.10.9" 
 MQTT_TOPIC = b"ble_rssi/rssi" 
-
-TARGET_NAMES = [
-    "beacon_1", 
-    "beacon_2", 
-    "beacon_3", 
-    "beacon_4",
-    "beacon_5",
-    "beacon_6",
-    "beacon_7",
-    "beacon_8"
-]
-
+TARGET_NAMES = ["beacon_1", "beacon_2", "beacon_3", "beacon_4", "beacon_5", "beacon_6", "beacon_7", "beacon_8"]
 MIN_RSSI = -110
+
+NEOPIXEL_PIN = 48
+COLOR_GREEN = (0, 15, 0); COLOR_RED = (15, 0, 0); COLOR_BLUE = (0, 0, 15); COLOR_YELLOW = (15, 15, 0); COLOR_OFF = (0, 0, 0)
+
+SEND_INTERVAL_MS = 100
+HEALTH_CHECK_INTERVAL_MS = 15000
 
 class BLEScanner:
     def __init__(self, target_names, min_rssi):
@@ -32,47 +29,58 @@ class BLEScanner:
         self.min_rssi = min_rssi
         self.ble = bluetooth.BLE()
         self.mqtt_client = None
-        self.beacons_buffer = {}
-
         self.sta_if = network.WLAN(network.STA_IF)
-        
-    def _connect_wifi(self):
-        if not self.sta_if.isconnected():
-            print('Connecting to network...')
-            self.sta_if.active(True)
-            self.sta_if.connect(WIFI_SSID, WIFI_PASS)
-            while not self.sta_if.isconnected():
-                time.sleep(1)
-        print('Network config:', self.sta_if.ifconfig())
+        self.beacons_buffer = {}
+        self.np = neopixel.NeoPixel(Pin(NEOPIXEL_PIN), 1)
+        self._set_led_color(COLOR_OFF)
 
-    def _check_wifi(self):
-        return self.sta_if.isconnected()
+    def _set_led_color(self, color): self.np[0] = color; self.np.write()
+    def _set_led_status(self): self._set_led_color(COLOR_GREEN if self.sta_if.isconnected() and self.mqtt_client else COLOR_RED)
+    def _pulse_led(self, color, duration_ms=20): self._set_led_color(color); time.sleep_ms(duration_ms); self._set_led_status()
+
+    def _connect_wifi(self):
+        if self.sta_if.isconnected(): return
+        print('Connecting to Wi-Fi...')
+        self.sta_if.active(True); self.sta_if.connect(WIFI_SSID, WIFI_PASS)
+        while not self.sta_if.isconnected(): self._pulse_led(COLOR_YELLOW, 200); time.sleep_ms(200)
+        print('Wi-Fi Connected.')
+
+
+    def _blinker_thread(self):
+        while self.is_connecting:
+            self._set_led_color(COLOR_YELLOW)
+            time.sleep_ms(500)
+            self._set_led_status()
+            time.sleep_ms(500)
 
     def _connect_mqtt(self):
-        self.mqtt_client = MQTTClient(client_id="", server=MQTT_BROKER)
-        print("Connecting to MQTT broker...")
-        self.mqtt_client.connect()
-        print("Connected to MQTT broker.")
-
-    def _check_mqtt(self): 
+        self.is_connecting = True
+        _thread.start_new_thread(self._blinker_thread, ())
+        
         try:
-            self.mqtt_client.ping()
-            return True
-        except:
-            return False
+            self.mqtt_client = MQTTClient(client_id="", server=MQTT_BROKER, keepalive=60)
+            print("Connecting to MQTT broker...")
+            self.mqtt_client.connect() 
+            print("Connected to MQTT broker.")
+        except Exception as e:
+            print(f"MQTT connect error: {e}")
+            self.mqtt_client = None
+        finally:
+
+            self.is_connecting = False
+            time.sleep_ms(250) 
+            self._set_led_status() 
 
     def _decode_adv_payload(self, payload_bytes):
-        i = 0
-        result = {}
+        i=0; result={};
         while i < len(payload_bytes):
-            length = payload_bytes[i]
-            if length == 0: break
-            ad_type = payload_bytes[i + 1]
-            data = payload_bytes[i + 2 : i + length + 1]
-            if ad_type == 0x09 or ad_type == 0x08:
-                try: result['name'] = bytes(data).decode('utf-8')
-                except UnicodeError: pass
-            i += length + 1
+            l=payload_bytes[i];
+            if l==0: break
+            t=payload_bytes[i+1]; d=payload_bytes[i+2:i+l+1]
+            if t==9 or t==8:
+                try: result['name']=bytes(d).decode('utf-8')
+                except: pass
+            i+=l+1
         return result
 
     def _scan_callback(self, event, data):
@@ -81,72 +89,77 @@ class BLEScanner:
             if rssi < self.min_rssi: return
             adv_info = self._decode_adv_payload(adv_data_bytes)
             if 'name' not in adv_info or adv_info['name'] not in self.target_names: return
-
             device_name = adv_info['name']
-            if device_name not in self.beacons_buffer or rssi > self.beacons_buffer[device_name]['rssi']:
-                self.beacons_buffer[device_name] = {
-                    # "mac": ubinascii.hexlify(addr_bytes, ':').decode().upper(),
-                    "rssi": rssi,
-                    # "last_seen": time.time()
-                }
 
-            
-            # payload = json.dumps(device_info)
-            # print(f"Publishing: {payload}")
-            # self.mqtt_client.publish(MQTT_TOPIC, payload)
-    
+            self.beacons_buffer.setdefault(device_name, []).append(rssi)
     def run(self):
-        self._connect_wifi()
-        self._connect_mqtt()
-        self.ble.active(True)
-        self.ble.irq(self._scan_callback)
-        
-        print(f"Starting initial scanner...")
+        self._connect_wifi(); self._connect_mqtt()
+        self.ble.active(True); self.ble.irq(self._scan_callback)
         self.ble.gap_scan(0, 150000, 130000, True)
+        # print("Scanner is running...")
         
-        last_check = time.ticks_ms()
+        last_send_time = time.ticks_ms()
+        last_health_check_time = time.ticks_ms()
         
-        while True:
-            time.sleep(0.1)
-            wifi_ok = self.sta_if.isconnected()
-            mqtt_ok = self._check_mqtt()
+        try:
+            while True:
+                now = time.ticks_ms()
 
-            if not wifi_ok or not mqtt_ok:
-                print("Network issue detected. Pausing scanner for maintenance...")
-                self.ble.gap_scan(None) 
-                time.sleep_ms(200)
+                # --- SEND DATA ---
+                if time.ticks_diff(now, last_send_time) > SEND_INTERVAL_MS:
+                    last_send_time = now
 
-                if not wifi_ok:
-                    self._connect_wifi()
-                
-                if self.sta_if.isconnected() and not mqtt_ok:
-                    self._connect_mqtt()
+                    if self.beacons_buffer and self.mqtt_client:
+                        
+                        # Send averaged RSSI values
+                        batch_payload = [
+                            {"name": name, "rssi": sum(data) / len(data), "mrssi": max(data), "count": len(data)} for name, data in self.beacons_buffer.items()
+                        ]
+                        
+                        batch_payload = sorted(batch_payload, key=lambda x: x['name'])
 
-                print("Resuming scanner...")
-                self.ble.gap_scan(0, 150000, 130000, True)
-            if self.beacons_buffer:
-                batch_payload = []
-                for name, data in self.beacons_buffer.items():
-                    item = {"name": name, "rssi": data["rssi"]}
-                    batch_payload.append(item)
-                
-                try:
-                    payload_str = json.dumps(batch_payload)
-                    self.mqtt_client.publish(MQTT_TOPIC, payload_str)
-                    print(f"Published batch: {payload_str}")
-                except Exception as e:
-                    print(f"Failed to publish batch: {e}")
-                    self.mqtt_client = None # Сбрасываем клиент при ошибке
-                
-                # Очищаем "корзину" для следующего 5-секундного сбора
-                self.beacons_buffer.clear()
-            else:
-                print("No beacons detected in this interval.")
-                
+                        batch_timestamp = {"pack": batch_payload, "timestamp": time.time()}
 
+                        
+                        try:
+                            payload_str = json.dumps(batch_timestamp)
+                            self.mqtt_client.publish(MQTT_TOPIC, payload_str)
+
+                            print(f"Published: {payload_str}")
+
+                            self._pulse_led(COLOR_BLUE)
+
+                            self.beacons_buffer.clear() # Clear buffer
+                        except Exception as e:
+
+                            print(f"MQTT publish error: {e}. Data will be resent.")
+
+                            self.mqtt_client = None # Raise flag to reconnect
+
+                            self._set_led_status() # Update LED status
+
+                # --- Network Health Check ---
+                if time.ticks_diff(now, last_health_check_time) > HEALTH_CHECK_INTERVAL_MS:
+                    last_health_check_time = now
+                    if not self.sta_if.isconnected():
+                        self._set_led_status()
+                        print("Health Check: Wi-Fi disconnected. Reconnecting...")
+                        self._connect_wifi()
+                    if not self.mqtt_client:
+                        self._set_led_status()
+                        print("Health Check: MQTT disconnected. Reconnecting...")
+                        self._connect_mqtt()
+                
+                time.sleep_ms(10)
+        
+        except Exception as e:
+            print(f"FATAL ERROR in main loop: {e}")
+            self._set_led_color(COLOR_RED)
+            time.sleep(10)
+            reset() # Hardware reset on fatal error
 
 # --- Main ---
 if __name__ == "__main__":
-    print("BLE Scanner with MQTT")
+    time.sleep(3)
     scanner = BLEScanner(target_names=TARGET_NAMES, min_rssi=MIN_RSSI)
     scanner.run()
