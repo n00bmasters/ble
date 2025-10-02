@@ -1,6 +1,6 @@
 import paho.mqtt.client as mqtt
 import numpy as np
-from backend.src.math_mod_2 import DistanceCalc, Kalman2D
+from math_mod_2 import DistanceCalc, Kalman2D
 import json
 import matplotlib.pyplot as plt
 
@@ -36,11 +36,11 @@ def on_connect(client, userdata, flags, reason_code, properties):
     print(list(json.loads(open('../config/calibrate.beacons').read()).items()))
     #print(rssi)
     dt=2.5 # дата тайм между измерениями в секундах
-    std_acc=1.0 # Mean noise БУДЕМ КАЛИБРОВАТЬ
+    std_acc=2.0 # Mean noise БУДЕМ КАЛИБРОВАТЬ
 
     # noise measurement in meters .БУДЕМ КАЛИБРОВАТЬ
-    x_std_meas = 0.5 
-    y_std_meas=0.5 
+    x_std_meas = 1.0 
+    y_std_meas=1.0
 
     kalman_filter = Kalman2D(dt, std_acc, x_std_meas, y_std_meas)
     kalman_filter.initialize_state(0, 0)
@@ -94,7 +94,9 @@ def on_message(client, userdata, msg):
 
 
         filtered_state = kalman_filter.kf.x
-        cur_pos = [filtered_state[0], filtered_state[1]]
+       
+        if abs(filtered_state[0] - cur_pos[0]) < 2 and abs(filtered_state[1] - cur_pos[1]) < 4.5:
+            cur_pos = [filtered_state[0], filtered_state[1]]
 
 
         print(f"Kalman filtered position: {cur_pos}")

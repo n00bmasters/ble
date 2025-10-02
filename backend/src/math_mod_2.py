@@ -31,7 +31,7 @@ class Kalman2D:
         G = np.array([[0.5*dt**2], [0.5*dt**2], [dt], [dt]])
         self.kf.Q = G @ G.T * std_acc**2
 
-        kf.P *= 1000.0  # covariance matrix
+        self.kf.P *= 1000.0  # covariance matrix
         
         return
 
@@ -57,10 +57,10 @@ class DistanceCalc:
         self.trans = trans
         self.def_power = def_power #СУКИ КАЛИБРУЙТЕ ОТ ОДНОЙ НОДЫ, А НЕ ОТ ВСЕХ
         self.scale = 32 
-        self.ple = 3.7
+        self.ple = 5
 
     def get_pos(self, beacon_measurements):
-        beacon_measurements.sort(key=lambda x: x['std_dev'])
+        beacon_measurements.sort(key=lambda x: x['std_dev'], reverse=True)
         best_beacons = beacon_measurements[:3]
         measurements_for_trilateration = []
         for beacon in best_beacons: # Preparing data for trilateration
