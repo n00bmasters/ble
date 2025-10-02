@@ -13,6 +13,7 @@ BEACON_COUNT = 8
 CALIBRATION_TIME_S = 30
 DISTANCE_METERS = 1.0
 MQTT_TOPIC = "ble_rssi/rssi"
+MQ
 
 collector = {}
 
@@ -36,7 +37,6 @@ def on_message(client, userdata, msg):
 
 
 def calibrate():
-    global collector
     tx_power_results = {}
     
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
@@ -49,14 +49,13 @@ def calibrate():
     try:
         for i in range(1, BEACON_COUNT + 1):
             beacon_name_to_calibrate = f"beacon_{i}"
-            collector = {} # Очищаем сборщик для нового маяка
+            collector = {} 
             
             input(f"\n[ACTION] Please stand at {DISTANCE_METERS}m from BEACON {i} and press Enter...")
             
             print(f"Collecting data for {CALIBRATION_TIME_S} seconds for {beacon_name_to_calibrate}...")
             time.sleep(CALIBRATION_TIME_S)
             
-            # Останавливаем сбор (просто перестаем слушать на время обработки)
             client.unsubscribe(MQTT_TOPIC)
             
             print("Processing data...")
@@ -64,7 +63,7 @@ def calibrate():
             if beacon_name_to_calibrate in collector:
                 rssi_list = collector[beacon_name_to_calibrate]
                 tx_power = np.mean(rssi_list)
-                tx_power_results[beacon_name_to_calibrate] = round(tx_power, 2)
+                tx_power_results[beacon_name_to_calibrate] = tx_power
                 print(f"SUCCESS: Calibrated TxPower for {beacon_name_to_calibrate} is {tx_power_results[beacon_name_to_calibrate]}")
             else:
                 print(f"ERROR: No data received from {beacon_name_to_calibrate}. Skipping.")
@@ -76,7 +75,6 @@ def calibrate():
     finally:
         client.loop_stop()
 
-    # Сохраняем результаты
     output_file = "tx_power_config.json"
     with open(output_file, 'w') as f:
         json.dump(tx_power_results, f, indent=4)
@@ -87,4 +85,3 @@ def calibrate():
 
 if __name__ == "__main__":
     calibrate()
-    
