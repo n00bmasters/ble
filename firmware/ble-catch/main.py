@@ -1,12 +1,15 @@
 # main.py
 """
-Скан BLE-устройств филтрация по имени и RSSI
+Скан BLE-устройств фильтрация по имени и RSSI
 возврат json
 """
 import bluetooth
 import time
 import ubinascii
 import json
+import network
+
+
 
 
 
