@@ -21,5 +21,5 @@ RUN pip install --upgrade pip wheel
 RUN pip install --no-cache-dir -r src/requirements.txt
 
 CMD ["cd", "src"]
-CMD ["python", "src/app.py"]
+CMD ["python", "server.py"]
 
