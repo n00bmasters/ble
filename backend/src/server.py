@@ -12,8 +12,7 @@ from datetime import datetime
 from pathlib import Path
 import traceback
 
-# if app_2 exposes a function to create plot, import it.
-# from app_2 import app_run  # uncomment if you can call the generator function directly
+#bin/uvicorn server:app --port 8080 --host 127.0.0.1 --reload
 
 IMAGES_DIR = Path("static")
 PLOT_PATH = IMAGES_DIR / "plot.png"
