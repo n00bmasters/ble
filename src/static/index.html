@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Image → Canvas — periodic GET</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;margin:0}
+    body{display:flex;min-height:100vh;align-items:center;justify-content:center;background:#f6f7fb}
+    .card{width:980px;max-width:98%;background:white;border-radius:12px;padding:20px;box-shadow:0 6px 18px rgba(20,20,30,0.08)}
+    h1{margin:0 0 12px;font-size:20px}
+    .row{display:flex;gap:16px;align-items:flex-start}
+    .controls{width:360px;min-width:240px}
+    label{display:block;margin:12px 0 6px;font-weight:600;font-size:13px}
+    input[type=text], input[type=number]{display:block;width:100%;padding:8px;border-radius:8px;border:1px solid #ddd}
+    .btn{margin-top:10px;padding:10px 14px;border-radius:10px;border:0;background:#2b6ef6;color:white;font-weight:600;cursor:pointer}
+    .btn.secondary{background:#22c55e}
+    .btn.ghost{background:#f3f4f6;color:#111}
+    .btn.danger{background:#ef4444}
+    button:disabled{opacity:0.5;cursor:not-allowed}
+    canvas{background:#111;padding:0;border-radius:8px;display:block;max-width:800px;width:600px;height:auto}
+    .meta{font-size:13px;color:#555;margin-top:8px}
+    .small{font-size:12px;color:#777}
+    .row-actions{display:flex;gap:8px}
+    .status-line{margin-top:10px;font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Periodic GET image → canvas</h1>
+    <div class="row">
+      <div class="controls">
+        <label for="sourceInput">Image source (one-time set)</label>
+        <input id="sourceInput" type="text" placeholder='Enter image URL or "/static/plot.png"'>
+        <div class="small">Enter a direct image URL (https://...) or your backend GET endpoint (e.g. <code>/static/plot.png</code>).</div>
+
+        <label for="intervalInput">Poll interval (seconds)</label>
+        <input id="intervalInput" type="number" step="1" min="1" value="30">
+
+        <div class="row-actions">
+          <button id="startBtn" class="btn">Start polling</button>
+          <button id="stopBtn" class="btn ghost" disabled>Stop</button>
+          <button id="reloadNowBtn" class="btn secondary">Fetch now</button>
+        </div>
+
+        <div id="pollInfo" class="meta status-line">Not started</div>
+
+        <label style="margin-top:14px">Update server frequency</label>
+        <input id="serverIntervalInput" type="number" step="1" min="1" placeholder="Seconds (server)">
+        <button id="sendBtn" disabled class="btn">Update frequency on server</button>
+        <div id="status" class="meta"></div>
+
+        <label style="margin-top:14px">Actions</label>
+        <button id="uploadImageBtn" type="button" class="btn secondary">Upload canvas image to backend</button>
+        <div class="small" style="margin-top:6px">The page will *ask once* for the image source and then fetch it repeatedly every interval. External image GETs may be blocked by CORS; use a server-side proxy if needed.</div>
+      </div>
+
+      <div>
+        <canvas id="canvas" width="600" height="400"></canvas>
+        <div class="meta" id="canvasInfo">Canvas: 600 × 400</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const sourceInput = document.getElementById('sourceInput');
+    const intervalInput = document.getElementById('intervalInput');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const reloadNowBtn = document.getElementById('reloadNowBtn');
+    const serverIntervalInput = document.getElementById('serverIntervalInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const uploadImageBtn = document.getElementById('uploadImageBtn');
+    const status = document.getElementById('status');
+    const pollInfo = document.getElementById('pollInfo');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const canvasInfo = document.getElementById('canvasInfo');
+
+    // default source to the server's static plot
+    if (!sourceInput.value) sourceInput.value = '/static/plot.png';
+
+    let pollTimer = null;
+    let lastFetchTime = null;
+    let fetchCount = 0;
+
+    function setStatus(msg, isError){ status.textContent = msg || ''; status.style.color = isError ? 'crimson' : ''; }
+    function setPollInfo(msg){ pollInfo.textContent = msg; }
+
+    function drawPlaceholder(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle = '#222';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle = '#888';
+      ctx.font = '18px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('No image loaded — set source and press Start', canvas.width/2, canvas.height/2);
+    }
+    drawPlaceholder();
+
+    function drawImageObject(img){
+      const maxW = 800;
+      const maxH = 800;
+      let w = img.width;
+      let h = img.height;
+      const ratio = Math.min(maxW / w, maxH / h, 1);
+      w = Math.round(w * ratio);
+      h = Math.round(h * ratio);
+      canvas.width = w;
+      canvas.height = h;
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+      canvasInfo.textContent = `Canvas: ${w} × ${h}`;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    }
+
+    function validateIntegerInput(elem){
+      const val = elem.value;
+      if(val === '') return false;
+      const n = Number(val);
+      return Number.isFinite(n) && Number.isInteger(n) && n > 0;
+    }
+
+    serverIntervalInput.addEventListener('input', ()=>{ sendBtn.disabled = !validateIntegerInput(serverIntervalInput); });
+
+    // Fetch image (single attempt). Accepts an URL string (absolute or relative).
+    async function fetchAndDraw(url){
+      if(!url) { setPollInfo('No source set.'); return; }
+      setStatus('');
+      setPollInfo('Fetching...');
+      try{
+        // add cache-busting param
+        const sep = url.includes('?') ? '&' : '?';
+        const fetchUrl = url + sep + 'ts=' + Date.now();
+        const res = await fetch(fetchUrl, { method: 'GET', cache: 'no-store' });
+        if(!res.ok){ setPollInfo(`GET failed: ${res.status} ${res.statusText}`); return; }
+        const blob = await res.blob();
+        if(!blob.type.startsWith('image/')){ setPollInfo('Fetched resource is not an image.'); return; }
+        const img = new Image();
+        img.onload = ()=>{ URL.revokeObjectURL(img.src); drawImageObject(img); lastFetchTime = new Date(); fetchCount++; setPollInfo(`Last: ${lastFetchTime.toLocaleString()} — fetches: ${fetchCount}`); };
+        img.onerror = ()=>{ setPollInfo('Failed to decode fetched image.'); };
+        img.src = URL.createObjectURL(blob);
+      }catch(err){
+        setPollInfo('Network/CORS error: ' + err.message);
+      }
+    }
+
+    function startPolling(){
+      const src = sourceInput.value.trim() || '/static/plot.png';
+      const intervalSec = Number(intervalInput.value) || 30;
+      if(!src){ setPollInfo('Please set an image source before starting.'); return; }
+      // Disable source control after start — one-time set
+      sourceInput.disabled = true;
+      intervalInput.disabled = true;
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+      reloadNowBtn.disabled = false;
+      // immediate fetch
+      fetchCount = 0;
+      fetchAndDraw(src);
+      // set interval
+      pollTimer = setInterval(()=> fetchAndDraw(src), Math.max(1, intervalSec) * 1000);
+      setPollInfo('Polling started — fetching now...');
+    }
+
+    function stopPolling(){
+      if(pollTimer) clearInterval(pollTimer);
+      pollTimer = null;
+      sourceInput.disabled = false;
+      intervalInput.disabled = false;
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      reloadNowBtn.disabled = false;
+      setPollInfo(`Polling stopped — last fetch: ${lastFetchTime ? lastFetchTime.toLocaleString() : 'never'} (count: ${fetchCount})`);
+    }
+
+    startBtn.addEventListener('click', ()=>{ startPolling(); });
+    stopBtn.addEventListener('click', ()=>{ stopPolling(); });
+    reloadNowBtn.addEventListener('click', ()=>{
+      const src = sourceInput.value.trim() || '/static/plot.png';
+      if(!src){ setPollInfo('No source set.'); return; }
+      fetchAndDraw(src);
+    });
+
+    // Send interval to backend and also update local polling if running
+    sendBtn.addEventListener('click', async ()=>{
+      if(!validateIntegerInput(serverIntervalInput)) return;
+      const val = Number(serverIntervalInput.value);
+      sendBtn.disabled = true;
+      setStatus('Sending interval to backend...');
+      try{
+        const res = await fetch('/api/settings', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({interval_seconds: val})
+        });
+        if(!res.ok){ const txt = await res.text(); setStatus(`Server error: ${res.status} ${txt}`, true); }
+        else {
+          const data = await res.json().catch(()=>null);
+          setStatus('Interval updated on server.' + (data ? ' Response: ' + JSON.stringify(data) : ''));
+          // If polling is active, restart the local interval to match new value
+          if(pollTimer){
+            const src = sourceInput.value.trim() || '/static/plot.png';
+            clearInterval(pollTimer);
+            pollTimer = setInterval(()=> fetchAndDraw(src), Math.max(1, val) * 1000);
+            setPollInfo(`Polling (client) restarted with ${val}s interval.`);
+          }
+        }
+      }catch(err){ setStatus('Network error: ' + err.message, true); }
+      finally{ sendBtn.disabled = false; }
+    });
+
+    // Upload canvas as PNG to backend (assumes /api/upload-image exists)
+    uploadImageBtn.addEventListener('click', async ()=>{
+      setStatus('Preparing image...');
+      canvas.toBlob(async (blob) =>{
+        if(!blob){ setStatus('Failed to create image blob.', true); return; }
+        setStatus('Uploading image...');
+        const form = new FormData();
+        form.append('image', blob, 'canvas.png');
+        try{
+          const res = await fetch('/api/upload-image', { method: 'POST', body: form });
+          if(!res.ok){ const txt = await res.text(); setStatus(`Upload failed: ${res.status} ${txt}`, true); }
+          else { const data = await res.json().catch(()=>null); setStatus('Image uploaded successfully.' + (data ? ' Response: ' + JSON.stringify(data) : '')); }
+        }catch(err){ setStatus('Network error: ' + err.message, true); }
+      }, 'image/png');
+    });
+
+    // Auto-fill source from query param (but still one-time)
+    (function autoFillFromQuery(){
+      try{
+        const params = new URLSearchParams(location.search);
+        const imageParam = params.get('image');
+        const intervalParam = params.get('interval');
+        if(imageParam) sourceInput.value = imageParam;
+        if(intervalParam && Number(intervalParam) > 0) intervalInput.value = Number(intervalParam);
+      }catch(e){ /* ignore */ }
+    })();
+
+    // Clean up on unload
+    window.addEventListener('beforeunload', ()=>{ if(pollTimer) clearInterval(pollTimer); });
+
+    // Load server interval on page load and fill field (best-effort)
+    (async function loadServerInterval(){
+      try{
+        const res = await fetch('/api/settings');
+        if(res.ok){
+          const data = await res.json();
+          if(data && data.interval_seconds) serverIntervalInput.value = data.interval_seconds;
+        }
+      }catch(e){}
+    })();
+
+  </script>
+</body>
+</html>
+
