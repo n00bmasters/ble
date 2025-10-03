@@ -85,6 +85,13 @@
 
 3.  **Перезагрузите плату (`RESET`).**
 
+4.  **Поднимите контейнер с mosquitto, он находится в mosquitto/docker-compose.yml, с помощью docker-compose up -d**
+
+5.  **установите requirements.txt с помощью pip install -r requirements.txt**
+
+6.  **запустите src/app.py**
+
+
 Устройство начнет работать.
 
 ## Легенда LED-сигналов
