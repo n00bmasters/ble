@@ -85,6 +85,12 @@
 
 3.  **Перезагрузите плату (`RESET`).**
 
+4. **Поднимите mosquitto с помощью docker-compose up -d в директории mosquitto**
+
+5. **Установите requirements с помощью pip3 install -r src/requirements.txt**
+
+6. **запустите app.py**
+
 Устройство начнет работать.
 
 ## Легенда LED-сигналов
