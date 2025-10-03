@@ -35,8 +35,9 @@ def on_connect(client, userdata, flags, reason_code, properties):
         print(points)
 
 
-    with open('tx_power_config.json', 'r') as f:
+    with open('fingerprint_config.json', 'r') as f:
         tx_powers = json.load(f)
+    print(tx_powers)
 
     # tx_powers = []
     # for i in range(1, BEACON_COUNT + 1):
@@ -55,8 +56,8 @@ def on_connect(client, userdata, flags, reason_code, properties):
     std_acc=0.3 # Mean noise БУДЕМ КАЛИБРОВАТЬ
 
     # noise measurement in meters .БУДЕМ КАЛИБРОВАТЬ
-    x_std_meas = 3.0
-    y_std_meas = 3.0
+    x_std_meas = 5.0
+    y_std_meas = 5.0
 
     kalman_filter = Kalman2D(dt, std_acc, x_std_meas, y_std_meas)
     kalman_filter.initialize_state(0, 0)
@@ -134,6 +135,6 @@ client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 client.on_connect = on_connect
 client.on_message = on_message
 
-client.connect("127.0.0.1", 1883, 60)
+client.connect("172.20.10.3", 1883, 60)
 
 client.loop_forever()

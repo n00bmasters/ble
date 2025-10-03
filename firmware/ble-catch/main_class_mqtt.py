@@ -13,7 +13,7 @@ import math
 # --- Settings ---
 WIFI_SSID = "s2p12d"
 WIFI_PASS = "qwertyuiop"
-MQTT_BROKER = "10.9.34.158" 
+MQTT_BROKER = "172.20.10.3" 
 MQTT_TOPIC = b"ble_rssi/rssi" 
 TARGET_NAMES = ["beacon_1", "beacon_2", "beacon_3", "beacon_4", "beacon_5", "beacon_6", "beacon_7", "beacon_8"]
 MIN_RSSI = -110

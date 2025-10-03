@@ -85,7 +85,7 @@ def fingerprints_calibrate():
             point_fingerprint = {}
 
             for beacon_name, rssi_list in userdata['collector'].items():
-                point_fingerprint[beacon_name] = round(np.median(rssi_list), 2)
+                point_fingerprint[beacon_name] = np.median(rssi_list), 2
             
 
             calibration_fingerprints[point_to_calibrate] = point_fingerprint

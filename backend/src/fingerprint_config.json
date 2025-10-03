@@ -1,0 +1,74 @@
+{
+    "beacon_1": {
+        "beacon_6": -79.5,
+        "beacon_7": -94.0,
+        "beacon_4": -80.5,
+        "beacon_5": -75.0,
+        "beacon_2": -55.5,
+        "beacon_3": -69.0,
+        "beacon_1": -47.5
+    },
+    "beacon_2": {
+        "beacon_6": -81.0,
+        "beacon_7": -93.0,
+        "beacon_4": -82.0,
+        "beacon_5": -78.0,
+        "beacon_2": -40.0,
+        "beacon_3": -75.0,
+        "beacon_1": -56.0
+    },
+    "beacon_3": {
+        "beacon_6": -76.0,
+        "beacon_7": -92.5,
+        "beacon_4": -75.0,
+        "beacon_5": -70.5,
+        "beacon_2": -66.0,
+        "beacon_3": -45.0,
+        "beacon_1": -72.0
+    },
+    "beacon_4": {
+        "beacon_6": -82.0,
+        "beacon_7": -95.5,
+        "beacon_4": -40.0,
+        "beacon_5": -75.5,
+        "beacon_2": -85.5,
+        "beacon_3": -70.0,
+        "beacon_1": -85.0
+    },
+    "beacon_5": {
+        "beacon_6": -56.0,
+        "beacon_7": -81.0,
+        "beacon_4": -77.0,
+        "beacon_5": -42.0,
+        "beacon_2": -81.0,
+        "beacon_3": -67.0,
+        "beacon_1": -81.0
+    },
+    "beacon_6": {
+        "beacon_6": -47.0,
+        "beacon_7": -71.5,
+        "beacon_4": -84.0,
+        "beacon_5": -61.5,
+        "beacon_2": -88.0,
+        "beacon_3": -76.0,
+        "beacon_1": -86.0
+    },
+    "beacon_7": {
+        "beacon_2": -97.5,
+        "beacon_3": -91.0,
+        "beacon_6": -66.0,
+        "beacon_7": -43.5,
+        "beacon_4": -97.5,
+        "beacon_5": -82.0,
+        "beacon_1": -98.0
+    },
+    "beacon_8": {
+        "beacon_6": -53.5,
+        "beacon_7": -73.0,
+        "beacon_4": -84.0,
+        "beacon_5": -72.5,
+        "beacon_2": -80.5,
+        "beacon_3": -69.5,
+        "beacon_1": -82.5
+    }
+}

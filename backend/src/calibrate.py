@@ -14,6 +14,7 @@ BEACON_COUNT = 8
 CALIBRATION_TIME_S = 30
 DISTANCE_METERS = 1.0
 MQTT_TOPIC = "ble_rssi/rssi"
+MAIN_IP = "127.0.0.1"
 
 collector = {}
 
@@ -44,7 +45,7 @@ def calibrate():
     client.on_connect = on_connect
     client.on_message = on_message
     
-    client.connect("127.0.0.1", 1883, 60)
+    client.connect(MAIN_IP, 1883, 60)
     client.loop_start()
 
     try:
