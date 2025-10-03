@@ -1,0 +1,8 @@
+services:
+  mosquitto:
+    image: server
+    container_name: server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"  # Стандартный порт MQTT
+
