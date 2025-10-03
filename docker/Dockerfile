@@ -12,7 +12,6 @@ RUN apt-get update && apt-get install -y git \
  && chown -R appuser:appuser /opt/ble \
  && rm -rf /var/lib/apt/lists/*
 
-USER appuser
 WORKDIR /opt/ble
 
 # continue with pip installs etc
@@ -20,6 +19,7 @@ WORKDIR /opt/ble
 RUN pip install --upgrade pip wheel
 RUN pip install --no-cache-dir -r src/requirements.txt
 
-CMD ["cd", "src"]
+USER appuser
+WORKDIR /opt/ble/src
 CMD ["python", "server.py"]
 
