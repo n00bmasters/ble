@@ -14,7 +14,7 @@ import traceback
 
 #bin/uvicorn server:app --port 8080 --host 127.0.0.1 --reload
 
-IMAGES_DIR = Path("src/static")
+IMAGES_DIR = Path("static")
 PLOT_PATH = IMAGES_DIR / "plot.png"
 METADATA_FILE = Path("metadata.json")
 JOB_ID = "image_job"
