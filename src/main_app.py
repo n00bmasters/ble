@@ -1,6 +1,9 @@
+# src/main_app.py
+
+
 import paho.mqtt.client as mqtt
 import numpy as np
-from math_mod_2 import PositionCalculator, Kalman2D
+from main_math import PositionCalculator, Kalman2D
 import json
 import matplotlib.pyplot as plt
 from math import dist
@@ -41,19 +44,8 @@ def on_connect(client, userdata, flags, reason_code, properties):
         print("FATAL: fingerprint_config.json not found! Please run fingerprint calibration first.")
         return
 
-    # 2. берем TxPower из диагонали матрицы отпечатков
-    tx_powers = []
-    for i in range(1, BEACON_COUNT + 1):
-        point_name = f'beacon_{i}'
-        # сохраняем i i элементы
-        if point_name in fingerprints and point_name in fingerprints[point_name]:
-            tx_powers.append(fingerprints[point_name][point_name])
-        else:
-            print(f"WARNING: No self-RSSI found for {point_name} in fingerprints. Using default -60.")
-            tx_powers.append(-60.0)
-
-    calc = PositionCalculator(points, fingerprints, tx_powers)
-    print(f"Extracted Tx Powers from fingerprints: {tx_powers}")
+    calc = PositionCalculator(points, fingerprints)
+    print(f"Fingerprints: {fingerprints}")
 
 
     # -- Kalman setup

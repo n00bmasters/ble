@@ -1,4 +1,4 @@
-# backend/src/math_mod_3.py
+# src/main_math.py
 
 import scipy
 import numpy as np
