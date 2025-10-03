@@ -85,22 +85,18 @@
 
 3.  **Перезагрузите плату (`RESET`).**
 
-<<<<<<< HEAD
-4. **Поднимите mosquitto с помощью docker-compose up -d в директории mosquitto**
-
-5. **Установите requirements с помощью pip3 install -r src/requirements.txt**
-
-6. **запустите app.py**
-=======
 4.  **Поднимите контейнер с mosquitto, он находится в mosquitto/docker-compose.yml, с помощью docker-compose up -d**
 
 5.  **установите requirements.txt с помощью pip install -r requirements.txt**
 
 6.  **запустите src/app.py**
 
->>>>>>> refs/remotes/origin/backend
 
-Устройство начнет работать.
+Для взаимодействия с веб интерфейсом необходимо в директории docker собрать докер контейнер с помощью docker built -t server . и запустить с
+docker-compose up -d
+
+127.0.0.1:8080
+
 
 ## Легенда LED-сигналов
 
