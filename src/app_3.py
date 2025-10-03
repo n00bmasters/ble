@@ -31,7 +31,7 @@ def on_connect(client, userdata, flags, reason_code, properties):
     client.subscribe("ble_rssi/rssi")
     
     # 1. Загружаем координаты маяков
-    with open('../config/standart.beacons', 'r') as fp:
+    with open('config/standart.beacons', 'r') as fp:
         next(fp)
         for i in fp:
             st, x, y = i.split(';')
@@ -60,10 +60,10 @@ def on_connect(client, userdata, flags, reason_code, properties):
 
 
     # -- Kalman setup
-    dt = 2.5 # ESP32 timing
-    std_acc = 0.5 # acceleration
-    x_std_meas = 1.5
-    y_std_meas = 1.5
+    dt = 1 # ESP32 timing
+    std_acc = 0.3 # acceleration
+    x_std_meas = 2.5
+    y_std_meas = 2.5
     kalman_filter = Kalman2D(dt, std_acc, x_std_meas, y_std_meas)
     kalman_filter.initialize_state(0, 0)
 
