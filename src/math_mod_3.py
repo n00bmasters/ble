@@ -1,4 +1,4 @@
-# backend/src/math_mod_2.py
+# backend/src/math_mod_3.py
 
 import scipy
 import numpy as np
@@ -18,51 +18,56 @@ class Kalman2D:
     def initialize_state(self, x, y): self.kf.x = np.array([x, y, 0., 0.])
 
 class PositionCalculator:
-    def __init__(self, beacon_positions: dict, tx_powers: list[int]):
-        self.trans = beacon_positions
-        self.def_power = tx_powers
-        self.ple = 4.0 # ТЮНИМ ЕГО
-        print("Initialized with ROBUST TRILATERATION method.")
-
-    def get_dist(self, rssi, beacon_id):
-        if 0 <= beacon_id - 1 < len(self.def_power):
-            tx_power = self.def_power[beacon_id - 1]
-            if rssi > tx_power: return 0.5
-            return 10 ** ((tx_power - rssi) / (10 * self.ple))
-        return float('inf')
+    def __init__(self, beacon_positions: dict, fingerprints: dict):
+        self.beacon_positions = beacon_positions
+        self.fingerprints = fingerprints
+        self.k_neighbors = 3  # TUNE
+        print("Initialized with WEIGHTED K-NEAREST NEIGHBORS (Fingerprinting) method.")
 
     def get_pos(self, beacon_measurements):
-        beacon_measurements.sort(key=lambda x: x['std_dev'])
+        current_rssi_vector = {f"beacon_{m['id']}": m['rssi'] for m in beacon_measurements}
         
-        best_beacons = beacon_measurements[:4]
-        
-        measurements_for_trilateration = []
-        for beacon in best_beacons:
-            dist = self.get_dist(beacon['rssi'], beacon['id'])
-            weight = 1.0 / (beacon['std_dev'] + 0.1)
+        point_errors = []
+        for point_name, fingerprint_vector in self.fingerprints.items():
+            error = 0
+            common_beacons_count = 0
+            for beacon_name, calibrated_rssi in fingerprint_vector.items():
+                if beacon_name in current_rssi_vector:
+                    error += (calibrated_rssi - current_rssi_vector[beacon_name])**2
+                    common_beacons_count += 1
             
-            measurements_for_trilateration.append({
-                'id': beacon['id'],
-                'dist': dist, 
-                'weight': weight
-            })
-        
-        if len(measurements_for_trilateration) < 3:
+            if common_beacons_count >= 3:
+                normalized_error = error / common_beacons_count
+                point_errors.append({'name': point_name, 'error': normalized_error})
+
+        if not point_errors:
             return float('nan'), float('nan')
 
-        est_x, est_y = self._trilaterate(measurements_for_trilateration)
-        return est_x, est_y
-    
-    def _trilaterate(self, measurements):
-        def equations(guess):
-            x, y = guess
-            system = []
-            for m in measurements:
-                pos = self.trans[m['id']]
-                error = ((x - pos[0])**2 + (y - pos[1])**2 - m['dist']**2) * m['weight']
-                system.append(error)
-            return system
+        point_errors.sort(key=lambda x: x['error'])
+        k_nearest_neighbors = point_errors[:self.k_neighbors]
+
+        total_weight = 0
+        weighted_x = 0
+        weighted_y = 0
+
+        for neighbor in k_nearest_neighbors:
+            point_name = neighbor['name']
+            error = neighbor['error']
+            
+            # Превращаем ошибку в "вес доверия". Чем меньше ошибка, тем больше вес.
+            weight = 1.0 / (error + 0.001)
+            
+            beacon_id = int(point_name.split('_')[1])
+            position = self.beacon_positions[beacon_id]
+            
+            weighted_x += position[0] * weight
+            weighted_y += position[1] * weight
+            total_weight += weight
+
+        if total_weight == 0:
+            return float('nan'), float('nan')
+
+        final_x = weighted_x / total_weight
+        final_y = weighted_y / total_weight
         
-        initial_guess = np.mean([self.trans[m['id']] for m in measurements], axis=0)
-        res = scipy.optimize.least_squares(equations, initial_guess, bounds=([-10, -10], [50, 50]))
-        return res.x[0], res.x[1]
+        return final_x, final_y
