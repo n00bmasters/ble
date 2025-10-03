@@ -1,6 +1,9 @@
+# app_3.py
+
+
 import paho.mqtt.client as mqtt
 import numpy as np
-from math_mod_2 import PositionCalculator, Kalman2D
+from math_mod import PositionCalculator, Kalman2D
 import json
 import matplotlib.pyplot as plt
 from math import dist
@@ -28,7 +31,7 @@ def on_connect(client, userdata, flags, reason_code, properties):
     client.subscribe("ble_rssi/rssi")
     
     # 1. Загружаем координаты маяков
-    with open('../config/standart.beacons', 'r') as fp:
+    with open('config/standart.beacons', 'r') as fp:
         next(fp)
         for i in fp:
             st, x, y = i.split(';')
@@ -42,25 +45,25 @@ def on_connect(client, userdata, flags, reason_code, properties):
         return
 
     # 2. берем TxPower из диагонали матрицы отпечатков
-    tx_powers = []
-    for i in range(1, BEACON_COUNT + 1):
-        point_name = f'beacon_{i}'
-        # сохраняем i i элементы
-        if point_name in fingerprints and point_name in fingerprints[point_name]:
-            tx_powers.append(fingerprints[point_name][point_name])
-        else:
-            print(f"WARNING: No self-RSSI found for {point_name} in fingerprints. Using default -60.")
-            tx_powers.append(-60.0)
+    # tx_powers = []
+    # for i in range(1, BEACON_COUNT + 1):
+    #     point_name = f'beacon_{i}'
+    #     # сохраняем i i элементы
+    #     if point_name in fingerprints and point_name in fingerprints[point_name]:
+    #         tx_powers.append(fingerprints[point_name][point_name])
+    #     else:
+    #         print(f"WARNING: No self-RSSI found for {point_name} in fingerprints. Using default -60.")
+    #         tx_powers.append(-60.0)
 
-    calc = PositionCalculator(points, fingerprints, tx_powers)
-    print(f"Extracted Tx Powers from fingerprints: {tx_powers}")
+    calc = PositionCalculator(points, fingerprints)
+    print(f"Fingerprints: {fingerprints}")
 
 
     # -- Kalman setup
-    dt = 2.5 # ESP32 timing
-    std_acc = 0.5 # acceleration
-    x_std_meas = 1.5
-    y_std_meas = 1.5
+    dt = 1.5 # ESP32 timing
+    std_acc = 0.3 # acceleration
+    x_std_meas = 2.5
+    y_std_meas = 2.5
     kalman_filter = Kalman2D(dt, std_acc, x_std_meas, y_std_meas)
     kalman_filter.initialize_state(0, 0)
 
@@ -73,8 +76,6 @@ def on_connect(client, userdata, flags, reason_code, properties):
     global position_plot, f_plot, r_plot
     
     position_plot = ax.plot([cur_pos[0]], [cur_pos[1]], 'ro', markersize=8, label='Current Position')[0]
-    f_plot = ax.plot([cur_pos[0]], [cur_pos[1]], 'ko', markersize=8, label='Filt Position')[0]
-    r_plot = ax.plot([cur_pos[0]], [cur_pos[1]], 'go', markersize=8, label='Raw Position')[0]
     ax.set_xlabel('X Position')
     ax.set_ylabel('Y Position')
     ax.set_title('Real-time Position Tracking')
@@ -124,8 +125,6 @@ def on_message(client, userdata, msg):
 
         # Draw
         position_plot.set_data([cur_pos[0]], [cur_pos[1]])
-        r_plot.set_data([raw_pos[0]], [raw_pos[1]])
-        f_plot.set_data([filtered_state[0]], [filtered_state[1]])
         fig.canvas.draw(); fig.canvas.flush_events()
         print(cur_pos)
 

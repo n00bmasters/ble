@@ -21,7 +21,7 @@ class PositionCalculator:
     def __init__(self, beacon_positions: dict, fingerprints: dict):
         self.beacon_positions = beacon_positions
         self.fingerprints = fingerprints
-        self.k_neighbors = 4  # TUNE
+        self.k_neighbors = 2 # TUNE
         print("Initialized with WEIGHTED K-NEAREST NEIGHBORS (Fingerprinting) method.")
 
     def get_pos(self, beacon_measurements):
