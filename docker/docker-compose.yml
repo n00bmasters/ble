@@ -5,4 +5,5 @@ services:
     restart: unless-stopped
     ports:
       - "8080:8080"  # Стандартный порт MQTT
-
+    volumes:
+      - ../src/static:/opt/src/static
