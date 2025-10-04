@@ -6,4 +6,4 @@ services:
     ports:
       - "8080:8080"  # Стандартный порт MQTT
     volumes:
-      - ../src/static:/opt/src/static
+      - ../src/static:/opt/ble/src/static
